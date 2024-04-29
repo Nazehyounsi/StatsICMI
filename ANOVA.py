@@ -6,7 +6,7 @@ from scipy.stats import f_oneway
 from statsmodels.stats.multicomp import MultiComparison
 
 # Path to the main directory containing all configuration directories
-main_dir = "C:/Users/NEZIH YOUNSI/Desktop/Configurations"
+main_dir = "C:/Users/NEZIH YOUNSI/Desktop/AvgresultsConfig"
 
 # Function to extract metrics from a single text file
 def extract_metrics_from_file(file_path):
@@ -71,22 +71,46 @@ for metric_name, metric_groups in anova_data.items():
     else:
         anova_results[metric_name] = None  # Not enough data for ANOVA
 
-# Output ANOVA results
-print("ANOVA Results:")
-post_hoc_results = {}
-for metric_name, anova_result in anova_results.items():
-    if anova_result:
+output_file_path = main_dir = "C:/Users/NEZIH YOUNSI/Desktop/AvgresultsConfig/AnovaAblation.txt"
+# Open the output file in write mode
+with open(output_file_path, 'w') as output_file:
+    # Output ANOVA results
+    output_file.write("ANOVA Results:\n")
+    post_hoc_results = {}
 
-        print(f"{metric_name}: F-statistic = {anova_result.statistic:.4f}, P-value = {anova_result.pvalue:.4f}")
+    for metric_name, anova_result in anova_results.items():
+        if anova_result:
+            result_line = f"{metric_name}: F-statistic = {anova_result.statistic:.4f}, P-value = {anova_result.pvalue:.4f}\n"
+            output_file.write(result_line)
+            print(result_line)
 
-        #COMMENT THe POST hoc PART IN ORDER TO SEE ANOVA EVENR FOR RESULTS WHERE P VALUE > 0.05
-        # Only perform post-hoc analysis if the ANOVA result is significant
-        if anova_result.pvalue < 0.05:
-            # Create a DataFrame for post-hoc analysis
-            df = pd.DataFrame(aggregated_data)
-            # Select data for the current metric
-            metric_df = df[df['metric_name'] == metric_name]
+            # Only perform post-hoc analysis if the ANOVA result is significant
+            if anova_result.pvalue < 0.05:
+                # Create a DataFrame for post-hoc analysis
+                df = pd.DataFrame(aggregated_data)
+                # Select data for the current metric
+                metric_df = df[df['metric_name'] == metric_name]
 
+                # Perform Tukey's HSD
+                mc = MultiComparison(metric_df['metric_value'], metric_df['config_name'])
+                tukey_result = mc.tukeyhsd()
+
+                # Store the post-hoc results
+                post_hoc_results[metric_name] = tukey_result
+
+                # Write post-hoc results to file
+                output_file.write(f"Tukey's HSD for {metric_name}:\n")
+                output_file.write(tukey_result.summary().as_text())
+                output_file.write("\n\n")  # Add some space between different metrics
+
+                # Print post-hoc results
+                print(f"Tukey's HSD for {metric_name}:")
+                print(tukey_result)
+
+        else:
+            warning_line = f"ANOVA could not be performed for '{metric_name}' due to insufficient data.\n"
+            output_file.write(warning_line)
+            print(warning_line)
             # Perform Tukey's HSD
             mc = MultiComparison(metric_df['metric_value'], metric_df['config_name'])
             tukey_result = mc.tukeyhsd()
